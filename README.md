@@ -4,7 +4,7 @@ https://www.rabbitmq.com/documentation.html
 
 ## 启动RabbitMQ服务
 
-+ Window平台 
+#### Window平台 
 https://www.rabbitmq.com/install-windows.html
 1. 安装Erlang
     去官网下载安装即可，然后配置环境变量将安装目录添加到Path。  
@@ -63,16 +63,17 @@ https://www.rabbitmq.com/install-windows.html
 
 ## RabbitMQ 概念基础
 
-+ 通信协议
++ 通信协议  
     消息队列建立连接并通信的实现协议
     - AMQP 0-9-1
-    - 
+
 
 ## RabbitMQ 官方Demo
+这部分全参考自官网教程   
 https://www.rabbitmq.com/getstarted.html
 https://github.com/rabbitmq/rabbitmq-tutorials (github上的源码)
 
-+ Hello World
++ Hello World  
     最简单的RabbitMQ消息队列模型是  
     ![](https://www.rabbitmq.com/img/tutorials/python-one.png)  
     一个生产者发送消息给队列，队列将消息再发给一个消费者。  
@@ -125,14 +126,99 @@ https://github.com/rabbitmq/rabbitmq-tutorials (github上的源码)
     # hello   0           # hello是队列名 0表示队列里面的消息条数
     ```
     
-+ Work queues
++ Work queues    
+    一个生产者将消息发给一个queue，（如果有多个消息）再将消息以轮回或公平分发的策略发给多个消费者，
+    后面的几个场景也是如此，也可以指定多个消费者。
+    ![](https://www.rabbitmq.com/img/tutorials/python-two.png)
 
-+ Publish/Subscribe
-
-+ Routing
-
-+ Topics
-
+    涉及内容：  
+    - 消息确认(当消息处理异常时，将消息重新传给另一个消费者进行处理，这个功能是默认打开的)  
+        消费者接收处理完消息后会返回确认信息，然后消息才会从队列中删除，如果消费者线程处理异常导致connection和channel关闭，
+        RabbitMQ会立即将消息传给其他在线的消费者进行处理。
+        消息没有超时的概念，即使一个消息处理花费的时间很长很长，只要连接正常就不会转发。
+        ```
+        channel.basicAck(envelope.getDeliveryTag(), false); //返回确认信息(multiple为false表示只返回delivery tag)
+        channel.basicConsume(TASK_QUEUE_NAME, false, consumer);     //send a proper acknowledgment from the worker
+        ```
+    - 消息持久性（为确保即使RabbitMQ退出或崩溃后消息仍然不会丢失）  
+       ```
+       channel.queueDeclare("task_queue", durable, false, false, null);  //第二个参数为true,队列为持久化的队列，否则为非持久化队列    
+       
+       channel.basicPublish("", "task_queue",
+                   MessageProperties.PERSISTENT_TEXT_PLAIN,
+                   message.getBytes());
+       ```
+    - 发布确认(相对于上面两种策略更加强大的一种保护措施)
+        参考： https://www.rabbitmq.com/confirms.html
+    - 轮回分发  
+        轮流将队列中的消息分配给几个消费者（如有四个消息A\B\C\D，两个工作线程W1\W2，则A\C分配给W1,B\D分配给W2）
+    - 公平分发  
+        不会为消费者分发新的消息直到处理完成前一个消息并返回确认信息。  
+        这样还是有遗留问题的，如果所有的消费者（工作线程）都是忙状态，队列可能会被填满，这时就需要添加更多工作者线程或者使用其他策略。
+        ```
+        int prefetchCount = 1;
+        channel.basicQos(prefetchCount);
+       ```
+       
++ Publish/Subscribe  
+    发布/订阅 exchange通过广播的方式将一个消息发送给与exchange绑定的queue，然后再发给一个或多个消费者。 
+    
+    RabbitMQ更通用的消息模型  
+    ![](https://www.rabbitmq.com/img/tutorials/python-three-overall.png)  
+    生产者并不将消息直接放入工作队列，而是交给exchange(交换机)，exchange决定将消息放在哪个工作队列或哪些工作队列或是否丢弃；
+    这些规则取决于exchange的类型。
+    
+    direct：  
+    topic：   
+    headers：   
+    fanout：将收到的消息广播给所有与其相关联的队列。
+    
+    channel.basicPublish("", "hello", null, message.getBytes());这种用法其实是使用了默认的无名exchange。
+    消息被路由到routingKey指定名称的队列（如果队列存在的话）。
+    
+    这个实例是一个简单的日志系统，由两个程序组成，一个发送日志消息，一个接收消息并打印。  
+    
+    ```
+    # 查看exchange的命令
+    rabbitmqctl.bat list_exchanges
+    # 查看exchange和queue的绑定
+    rabbitmqctl.bat list_bindings
+    ```
+    
++ Routing  
+    只订阅某些消息，生产者按routing key发送消息，exchange通过direct模式和routing key匹配接收消息的队列，
+    将消息发给匹配的队列。
+   
+    channel.queueBind(queueName, EXCHANGE_NAME, "black");
+    队列绑定到交换机可以额外指定一个routingKey参数（如上），对不同的exchange类型有不同的意义。  
+    fanout 类型会直接无视此参数，将消息传递给所有绑定的队列；  
+    direct 类型只会将与queueBind中routingKey值匹配的消息传递给绑定的队列。
+     
+    如此demo所示  
+    ![](https://www.rabbitmq.com/img/tutorials/python-four.png)  
+    上图对应代码：
+    ```
+    # Productor
+    channel.exchangeDeclare(EXCHANGE_NAME, "direct");
+    String[] routingKeys = {"info", "error", "warning"}; 
+    for(String routingKey : routingKeys) {
+        channel.basicPublish(EXCHANGE_NAME, routingKey, null, message.getBytes());
+    }
+    # Customer
+    channel.exchangeDeclare(EXCHANGE_NAME, "direct");
+    channel.queueBind(queue1Name, EXCHANGE_NAME, "error");
+    for(String severity : argv){
+        channel.queueBind(queue2Name, EXCHANGE_NAME, severity);
+    }
+    ```
+   
++ Topics  
+    生产者不只按固定的routing key发送消息，而是按字符串正则表达式“匹配”发送，接收端同样如此。
+    
+    ![](https://www.rabbitmq.com/img/tutorials/python-five.png)
+    
+    
+    
 + RPC
 
 ## RabbitMQ 实际应用
