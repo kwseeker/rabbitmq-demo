@@ -20,6 +20,7 @@ public class ReceiveLogs {
 
         //声明交换机和队列，并将其绑定，队列就可以接收交换机的消息了
         channel.exchangeDeclare(EXCHANGE_NAME, BuiltinExchangeType.FANOUT);
+
         String queueName = channel.queueDeclare().getQueue();               //create a non-durable, exclusive, autodelete queue with a generated name
         channel.queueBind(queueName, EXCHANGE_NAME, "");        //将新建的队列绑定到交换机
 
@@ -29,23 +30,25 @@ public class ReceiveLogs {
         // DefaultConsumer有两个成员变量, 答案应该在 Channel 上
         //    private final Channel _channel;
         //    private volatile String _consumerTag;
-        new Thread(() -> {
-            MyDefaultConsumer consumer = new MyDefaultConsumer(channel);
-            try {
-                System.out.println("线程1中声明一个队列和一个消费者");
-                String queueName1 = channel.queueDeclare().getQueue();               //create a non-durable, exclusive, autodelete queue with a generated name
-                channel.queueBind(queueName1, EXCHANGE_NAME, "");
-                channel.basicConsume(queueName1, true, consumer);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        },"线程1"
-        ).start();
-
-        //一个线程只能定义一个consumer
-        System.out.println("main线程中声明一个队列和一个消费者");
+//        new Thread(() -> {
+//            MyDefaultConsumer consumer = new MyDefaultConsumer(channel);
+//            try {
+//                System.out.println("线程1中声明一个队列和一个消费者");
+//                String queueName1 = channel.queueDeclare().getQueue();               //create a non-durable, exclusive, autodelete queue with a generated name
+//                channel.queueBind(queueName1, EXCHANGE_NAME, "");
+//                channel.basicConsume(queueName1, true, consumer);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        },"线程1"
+//        ).start();
         MyDefaultConsumer consumer1 = new MyDefaultConsumer(channel);
         channel.basicConsume(queueName, true, consumer1);
+
+        MyDefaultConsumer consumer = new MyDefaultConsumer(channel);
+        String queueName1 = channel.queueDeclare().getQueue();               //create a non-durable, exclusive, autodelete queue with a generated name
+        channel.queueBind(queueName1, EXCHANGE_NAME, "");
+        channel.basicConsume(queueName1, true, consumer);
     }
 }
 
