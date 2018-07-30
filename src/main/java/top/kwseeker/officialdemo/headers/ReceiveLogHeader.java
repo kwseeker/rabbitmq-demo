@@ -44,8 +44,8 @@ public class ReceiveLogHeader {
         //    java -cp $CP ReceiveLogsHeader testQueue1  x-match any header1 value1
 
         //默认为键值对全部匹配，这里改为任意一个匹配
-        headers.put("x-match", "all");      //TODO: 改为全部匹配，keyA a keyB b 还是能和 keyA a keyC c 匹配上？
-//        headers.put("x-match", "any");
+//        headers.put("x-match", "all");      //改为全部匹配，keyA a keyB b 还是能和 keyA a keyC c 匹配上，Rabbit服务重启后正常为何？
+        headers.put("x-match", "any");
         for (int i = 1; i < argv.length; i++) {
             headers.put(argv[i], argv[i + 1]);
             System.out.println("Binding header " + argv[i] + " and value " + argv[i + 1] + " to queue " + queueInputName);
