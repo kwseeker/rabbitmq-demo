@@ -63,9 +63,108 @@ https://www.rabbitmq.com/install-windows.html
 
 ## RabbitMQ 概念基础
 
+RabbitMQ 可用于数据投递，非阻塞操作或推送通知。以及实现发布／订阅，异步处理，或者工作队列。所有这些都属于消息系统的模式。
+
+RabbitMQ可靠性高，拥有灵活的路由；支持同局域网的集群和聚合；在集群中队列可以镜像到多个服务器实现高可用；
+支持多种通信协议，提供了可视化管理工具，异常行为追踪系统，还附带有各种插件可对功能进行拓展。
+
 + 通信协议  
     消息队列建立连接并通信的实现协议
     - AMQP 0-9-1
+
+#### Rabbit核心原理
+RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
+
+#### 常用的功能
++ 工作队列
+
++ 发布/订阅
+
++ 路由（有选择地订阅）
+
++ RPC
+
+#### RabbitMQ Server
+
+##### RabbitMQ Server 配置
++ 配置  
+    RabbitMQ提供几种通用的方式定制Server：配置文件、环境变量、rabbitmqctl、rabbitmq-plugins、
+    运行时参数和策略。
+    
+    配置文件路径：  
+    Debian - /etc/rabbitmq/
+    Mac OSX (Homebrew) - ${install_prefix}/etc/rabbitmq/, the Homebrew prefix is usually /usr/local  
+    Windows - %APPDATA%\RabbitMQ\  
+    ```
+    $ echo $APPDATA
+    C:\Users\Lee\AppData\Roaming
+    ```
+    核心配置项：
+    https://www.rabbitmq.com/configure.html#config-items
+    
+    
++ 文件和目录位置
++ 日志
++ 策略和运行时参数
++ 客户端连接心跳
++ 内部节点连接心跳
++ 队列和消息生存周期拓展
+
+##### RabbitMQ 命令行工具
++ rabbitmqctl
++ rabbitmq-plugins
++ rabbitmqadmin
+
+##### 访问控制（认证与授权）
+
+##### 网络和TLS
+
+##### 监控、审计、故障排除
+
+##### 分布式RabbitMQ
+
+##### Guidelines（）
++ 生产清单
++ 备份和恢复
++ 可靠的消息传递
++ 升级
++ Blue-green deployment-based upgrade
+
+##### 消息存储和资源管理
++ 内存使用
++ 内存管理
++ 资源警报
++ 空磁盘空间报警
++ 流控制
++ 消息存储配置
++ 队列和消息生命周期拓展
++ 队列长度限制
++ 懒队列
+
+##### STOMP, MQTT, WebSockets
+[一文读懂MQTT协议](https://www.jianshu.com/p/5c42cb0ed1e9)
+
+安装STOMP插件之后就可以使用STOMP协议进行消息的传递；  
+MQTT（Message Queuing Telemetry Transport，消息队列遥测传输协议），是一种基于发布/订阅（publish/subscribe）模式的“轻量级”通讯协议，该协议构建于TCP/IP协议上，由IBM在1999年发布。
+MQTT最大优点在于，可以以极少的代码和有限的带宽，为连接远程设备提供实时可靠的消息服务。
+
+这些插件提供了实现长连接的方案。
+
+STOMP、MQTT协议的优缺点？怎么选择？
+
+#### RabbitMQ Client
+
+##### 下载和安装
+
+##### API指南
+
+##### API参考手册
+
+##### JMS指南
+
+##### JMS手册
+
+##### 命令行工具
 
 ## 常用API方法
 ```
