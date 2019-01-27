@@ -1,8 +1,41 @@
-# RabbitMQ
 参考：  
 https://www.rabbitmq.com/documentation.html
 
-## 启动RabbitMQ服务
+目录  
+[TOC]  
+
+## 消息队列简介
+
+选择衡量指标：  
+1）服务性能  
+2）数据存储  
+3）集群架构  
+
+几种常见消息队列的对比：    
++ ActiveMQ  
+功能强劲但是并发性能不够好，不适用于高并发的复杂的项目。  
+架构模式：
+
++ Kafka  
+刚开始是为了收集和传输日志，追求高吞吐量（性能很高）；但是缺点是不支持事务，不会对消息的重复、丢失、错误进行严格要求。  
+架构模式：
+ 
++ RocketMQ  
+纯Java开发，起源于Kafka, 针对Kafka的缺陷（不支持事务，传输不可靠）做了优化；具有高吞吐、高可用，适合大规模分布式系统应用的特点。
+但是是收费的。
+
++ RabbitMQ  
+性能不比Kafka，但是其他方面很好，高可用，稳定，数据可靠。  
+RabbitMQ高可用负载均衡集群架构：  
+ 
+选择RabbitMQ的原因：    
+1）开源、性能优秀、稳定性保障  
+2）提供可靠性消息投递模式、返回模式  
+3）与SpringAMQP完美整合，API丰富  
+4）集群模式丰富，表达式配置，HA模式，镜像队列模型  
+5）保证数据不丢失的前提下做到高可靠性、可用性   
+
+## RabbitMQ安装与使用
 
 #### Window平台 
 https://www.rabbitmq.com/install-windows.html
@@ -68,12 +101,34 @@ RabbitMQ 可用于数据投递，非阻塞操作或推送通知。以及实现�
 RabbitMQ可靠性高，拥有灵活的路由；支持同局域网的集群和聚合；在集群中队列可以镜像到多个服务器实现高可用；
 支持多种通信协议，提供了可视化管理工具，异常行为追踪系统，还附带有各种插件可对功能进行拓展。
 
-+ 通信协议  
-    消息队列建立连接并通信的实现协议
-    - AMQP 0-9-1
+#### AMQP通信协议  
+AMQP(Advanced Message Queueing Protocol)协议模型：
+![](https://img-blog.csdnimg.cn/20181215220952994.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1hVOTA2NzIy,size_16,color_FFFFFF,t_70)
+
+核心概念：
++ Server  
++ Connection
++ Channel
++ Message
++ Virtual Host
++ Exchange
++ Binding
++ Routing Key
++ Queue
+
+实际应用中最复杂的通信流程结构图：  
+
 
 #### Rabbit核心原理
 RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
+
++ RabbitMQ架构模型
+
++ 高性能的原因
+
++ RabbitMQ消息流转流程
+
++ 消息生产与消费
 
 #### 常用的功能
 + 工作队列
@@ -199,9 +254,6 @@ Lazy mode(x-queue-mode=lazy)：
     Lazy Queues: 先将消息保存到磁盘上，不放在内存中，当消费者开始消费的时候才加载到内存中
 Master locator(x-queue-master-locator)
 ```
-
-
-
 
 
 ## RabbitMQ 官方Demo
@@ -377,13 +429,13 @@ https://github.com/rabbitmq/rabbitmq-tutorials (github上的源码)
 
 ## RabbitMQ 实际应用
 
-+ 异步处理
++ 异步处理  
     可以异步处理的任务（相互之间不影响无依赖），都可以使用消息队列的工作者线程（Consumer是通过线程池创建的，多个Consumer可能共用一个线程）进行处理。
     
-+ 应用解耦
++ 应用解耦  
     两个模块系统（如订单和库存模块）之间需要尽量低耦合，使用消息队列可以使用消息代替接口调用从而降低耦合。
 
-+ 流量削峰
++ 流量削峰  
     抢购活动中一瞬间并发请求很高，很容易导致应用挂掉，所以在服务器收到请求后先写入消息队列（然后从队列一个个地取并处理），
     消息队列写满后其余的用户请求直接抛弃或跳转到错误页面。
 
