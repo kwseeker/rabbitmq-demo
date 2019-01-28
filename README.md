@@ -37,7 +37,7 @@ RabbitMQ高可用负载均衡集群架构：
 
 ## RabbitMQ安装与使用
 
-#### Window平台 
+#### Window
 https://www.rabbitmq.com/install-windows.html
 1. 安装Erlang
     去官网下载安装即可，然后配置环境变量将安装目录添加到Path。  
@@ -61,12 +61,23 @@ https://www.rabbitmq.com/install-windows.html
     ```
     rabbitmq-plugins enable rabbitmq_management
     rabbitmq-plugins disable rabbitmq_management
+    rabbitmq-plugins list           #显示可选插件
     ```
-    新建用户及设置用户权限
+    
+    新建用户及设置用户权限  
+    RabbitMQ有五种用户类型：超级管理员, 监控者, 策略制定者, 普通管理者以及其他；  
+    默认创建了guest用户，密码guest；  
+    默认有一个"/"的虚拟主机；  
+    web管理页面：http://localhost:15672/#
     ```
-    # rabbitmqctl更多操作：https://www.rabbitmq.com/man/rabbitmqctl.8.html
+    # rabbitmqctl 更多操作：https://www.rabbitmq.com/man/rabbitmqctl.8.html
     rabbitmqctl add_user <username> <password>
-    rabbitmqctl set_user_tags <username> <administrator>  # 设置用户为管理员
+    rabbitmqctl set_user_tags <username> administrator  # 设置用户为管理员
+    rabbitmqctl add_vhost <vhostname>   #添加虚拟主机
+    rabbitmqctl set_permissions -p <vhostname> <username> .* .* .*
+    rabbitmqctl delete_user <username>
+    rabbitmqctl change_password <username> <new_password>
+    rabbitmqctl list_users
     ```
 3. 自定义RabbitMQ环境变量
     有些时候可能需要自定义（或者说客制化）环境变量，有两种方法：  
@@ -74,7 +85,8 @@ https://www.rabbitmq.com/install-windows.html
     - 创建和编辑 rabbitmq-env-conf.bat 用于定义环境变量，这个文件的路径地址由 RABBITMQ_CONF_ENV_FILE 环境变量指定。   
     注意：环境改变后，需要重新安装服务。
 
-    Rabbit环境变量配置的内容：  
+    Rabbit环境变量配置项：  
+    ```
     RABBITMQ_NODE_IP_ADDRESS  
     RABBITMQ_NODE_PORT  
     RABBITMQ_DIST_PORT  
@@ -90,9 +102,21 @@ https://www.rabbitmq.com/install-windows.html
     RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS
     RABBITMQ_SERVER_START_ARGS  
     ...  
-
+    ```
     详细参考：  
     https://www.rabbitmq.com/configure.html#configuration-file  
+
+#### Mac
+```
+$ brew udpate
+$ brew install rabbitmq
+```
+安装之后默认会将rabbitmq的命令行工具放在 /usr/local/sbin
+
+
+#### Docker(推荐)
+https://hub.docker.com/_/rabbitmq
+
 
 ## RabbitMQ 概念基础
 
@@ -103,7 +127,7 @@ RabbitMQ可靠性高，拥有灵活的路由；支持同局域网的集群和聚
 
 #### AMQP通信协议  
 AMQP(Advanced Message Queueing Protocol)协议模型：
-![](https://img-blog.csdnimg.cn/20181215220952994.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L1hVOTA2NzIy,size_16,color_FFFFFF,t_70)
+![](https://img-blog.csdn.net/20180226153824467?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvcXFfMzE2MzQ0NjE=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70)
 
 核心概念：
 + Server  
@@ -111,7 +135,8 @@ AMQP(Advanced Message Queueing Protocol)协议模型：
 + Channel
 + Message
 + Virtual Host
-+ Exchange
++ Exchange  
+
 + Binding
 + Routing Key
 + Queue
@@ -128,7 +153,13 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
 
 + RabbitMQ消息流转流程
 
-+ 消息生产与消费
++ 消息生产与消费  
+相关类：  
+ConnectionFactory: 获取连接工厂；  
+Connection：通过连接工厂创建一个连接；  
+Channel： 通过连接创建数据通信信道，用于发送和接收消息；  
+Queue：具体的消息存储队列；  
+Producer & Consumer 生产和消费者；  
 
 #### 常用的功能
 + 工作队列
@@ -166,7 +197,13 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
 + 队列和消息生存周期拓展
 
 ##### RabbitMQ 命令行工具
-+ rabbitmqctl
++ rabbitmqctl  
+    https://www.rabbitmq.com/man/rabbitmqctl.8.html
+    ```
+    rabbitmqctl list_queues
+    rabbitmqctl list_vhosts
+    rabbitmqctl status
+    ```    
 + rabbitmq-plugins
 + rabbitmqadmin
 
