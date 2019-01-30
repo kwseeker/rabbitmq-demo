@@ -126,25 +126,168 @@ RabbitMQ可靠性高，拥有灵活的路由；支持同局域网的集群和聚
 支持多种通信协议，提供了可视化管理工具，异常行为追踪系统，还附带有各种插件可对功能进行拓展。
 
 #### AMQP通信协议  
-AMQP(Advanced Message Queueing Protocol)协议模型：
+AMQP(Advanced Message Queueing Protocol)协议模型：  
 ![](https://img-blog.csdn.net/20180226153824467?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvcXFfMzE2MzQ0NjE=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70)
 
 核心概念：
 + Server  
-+ Connection
-+ Channel
-+ Message
-+ Virtual Host
++ Connection  
+    相关类：  
+    ConnectionFactory:连接工厂  
+    使用 new ConnectionFactory()初始化的默认配置：  
+    ```
+    connectionFactory = {ConnectionFactory@791} 
+     virtualHost = "/"
+     host = "localhost"
+     port = -1
+     requestedChannelMax = 2047
+     requestedFrameMax = 0
+     requestedHeartbeat = 60
+     connectionTimeout = 60000
+     handshakeTimeout = 10000
+     shutdownTimeout = 10000
+     _clientProperties = {HashMap@794}  size = 6
+      0 = {HashMap$Node@804} "product" -> "RabbitMQ"
+      1 = {HashMap$Node@805} "copyright" -> "Copyright (c) 2007-2018 Pivotal Software, Inc."
+      2 = {HashMap$Node@806} "capabilities" -> " size = 6"
+      3 = {HashMap$Node@807} "information" -> "Licensed under the MPL. See http://www.rabbitmq.com/"
+      4 = {HashMap$Node@808} "version" -> "5.5.0"
+      5 = {HashMap$Node@809} "platform" -> "Java"
+     socketFactory = null
+     saslConfig = {DefaultSaslConfig@795} 
+      mechanism = "PLAIN"
+     sharedExecutor = null
+     threadFactory = {Executors$DefaultThreadFactory@796} 
+      group = {ThreadGroup@789} "java.lang.ThreadGroup[name=main,maxpri=10]"
+      threadNumber = {AtomicInteger@828} "1"
+      namePrefix = "pool-1-thread-"
+     shutdownExecutor = null
+     heartbeatExecutor = null
+     socketConf = {SocketConfigurators$lambda@797} 
+     exceptionHandler = {DefaultExceptionHandler@798} 
+     credentialsProvider = {DefaultCredentialsProvider@799} 
+      username = "guest"
+      password = "guest"
+     automaticRecovery = true
+     topologyRecovery = true
+     topologyRecoveryExecutor = null
+     networkRecoveryInterval = 5000
+     recoveryDelayHandler = null
+     metricsCollector = null
+     nio = false
+     frameHandlerFactory = null
+     nioParams = {NioParams@800} 
+      readByteBufferSize = 32768
+      writeByteBufferSize = 32768
+      nbIoThreads = 1
+      writeEnqueuingTimeoutInMs = 10000
+      writeQueueCapacity = 10000
+      nioExecutor = null
+      threadFactory = null
+      socketChannelConfigurator = {SocketChannelConfigurators$lambda@836} 
+      sslEngineConfigurator = {NioParams$lambda@837} 
+      connectionShutdownExecutor = null
+      byteBufferFactory = {DefaultByteBufferFactory@838} 
+       allocator = {DefaultByteBufferFactory$lambda@840} 
+      writeQueueFactory = {NioParams$lambda@839} 
+     sslContextFactory = null
+     channelRpcTimeout = 600000
+     channelShouldCheckRpcResponseType = false
+     errorOnWriteListener = null
+     workPoolTimeout = -1
+     topologyRecoveryFilter = null
+     connectionRecoveryTriggeringCondition = null
+     topologyRecoveryRetryHandler = null
+     trafficListener = {TrafficListener$1@801} 
+    ```
+    ```
+    params = {ConnectionParams@816} 
+     credentialsProvider = {DefaultCredentialsProvider@798} 
+     consumerWorkServiceExecutor = null
+     heartbeatExecutor = null
+     shutdownExecutor = null
+     virtualHost = "/"
+     clientProperties = {HashMap@793}  size = 6
+     requestedFrameMax = 0
+     requestedChannelMax = 2047
+     requestedHeartbeat = 60
+     handshakeTimeout = 10000
+     shutdownTimeout = 10000
+     saslConfig = {DefaultSaslConfig@794} 
+     networkRecoveryInterval = 5000
+     recoveryDelayHandler = null
+     topologyRecovery = true
+     topologyRecoveryExecutor = null
+     channelRpcTimeout = 600000
+     channelShouldCheckRpcResponseType = false
+     errorOnWriteListener = null
+     workPoolTimeout = -1
+     topologyRecoveryFilter = null
+     connectionRecoveryTriggeringCondition = null
+     topologyRecoveryRetryHandler = null
+     exceptionHandler = {DefaultExceptionHandler@797} 
+     threadFactory = {Executors$DefaultThreadFactory@795} 
+     trafficListener = {TrafficListener$1@800} 
+    ```
+    Connection：通过连接工厂创建的连接  
+      
+    
+    
++ Channel  
+    Channel： 通过连接创建数据通信信道，用于发送和接收消息；  
+         
++ Message  
+    传输的数据，由Properties和Payload（Body）组成。  
+    常用的属性：  
+    delivery mode  
+    headers（添加自定义属性）  
+    content_type  
+    content_encoding  
+    priority  
+    correlation_id  
+    reply_to   
+    expiration  
+    message_id  
+    timestamp  
+    type  
+    user_id  
+    app_id  
+    cluster_id  
+    
++ Virtual Host  
 + Exchange  
+    创建之后将会一直存在，除非手动删除或重启rabbitmq-server
 
-+ Binding
-+ Routing Key
-+ Queue
+    功能：  
+        交换机用于接收消息，并根据路由键(Routing Key)转发消息到绑定的队列；  
+        交换机可能从多个client接收消息，并转发给多个队列，具体由交换机类型决定；  
+    类型：  
+        Direct：此模式可以使用RabbitMQ自带的Exchange,不需要绑定操作，直接通过RouteKey完全匹配队列传递；  
+        Topic：此模式可以进行模糊匹配（#匹配一或多个词，*匹配一个词）  
+        fanout：不通过路由键过滤消息(性能最好)，直接将队列绑定到交换机上，只要有消息发送到交换机都会转发到与改交换机绑定的队列；    
+        headers：经过消息头路由，不常用。  
+        ...  
+    
+    Durability(持久化)：  
+        是否需要持久化；
+    Auto Delete：  
+        交换机上无绑定队列时，自动删除此交换机；
+    Internal：
+        当前Exchange是否用于RabbitMQ内部使用(拓展插件，拓展参数等)，默认为false。
+        
++ Binding  
++ Routing Key   
+    路由键，相当于过滤器，交换机与队列即使是绑定的如果路由键不同也不会接收。    
++ Queue  
+    Queue：具体的消息存储队列；  
+
++ Producer & Consumer  
+    生产和消费者； 
 
 实际应用中最复杂的通信流程结构图：  
 
 
-#### Rabbit核心原理
+#### Rabbit核心原理与生产问题
 RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
 
 + RabbitMQ架构模型
@@ -154,12 +297,34 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
 + RabbitMQ消息流转流程
 
 + 消息生产与消费  
-相关类：  
-ConnectionFactory: 获取连接工厂；  
-Connection：通过连接工厂创建一个连接；  
-Channel： 通过连接创建数据通信信道，用于发送和接收消息；  
-Queue：具体的消息存储队列；  
-Producer & Consumer 生产和消费者；  
+
++ 消息高可靠性(保障消息100%投递成功)   
+    添加发送端接收MQ节点（Broker）确认应答的逻辑，如果发送端收到确认应答信息则投递成功，  
+    可能有两种异常：消息发送失败；接受确认应答消息失败。  
+    
+    互联网大厂针对上面问题的解决方案：  
+    下面两种操作中都不对数据添加事务管理。
+    
+    1、消息落库，对消息状态进行打标  
+    ![](https://upload-images.jianshu.io/upload_images/426671-5af2da37ddcf30c0.png?imageMogr2/auto-orient/)  
+    1）存储消息到数据库，并设置状态；  
+    2）发送消息成功（收到应答），修改消息状态；  
+    3）对状态为未成功发送的消息，进行轮询（如每隔10秒轮询一次）重发（有最大重试次数）；  
+    4）经过上面步骤可能还有少量的消息传递失败，这时需要，额外处理，给出失败原因。  
+    这种处理方法并不适合高并发场景，因为数据库操作太多。  
+
+    2、消息的延迟投递，做二次确认，回调检查   
+    ![](https://upload-images.jianshu.io/upload_images/426671-5d9cfdda2cf2fc84.png?imageMogr2/auto-orient/)  
+    1）上层业务按正常时间先发送一次消息，并设置N分钟后重新发送；
+    2）消息发送到MQ节点（可能是负载均衡的集群），消费Listener监听消息并发给下层服务处理
+    3）下层服务处理完成，发送一个confirm消息到MQ节点，失败补偿服务（callback service）
+    这种方式可以有效减少数据库操作，性能更好。
+    
++ 海量订单产生的业务高峰期如何避免消息的重复消费问题
+
++ 消息限流
+
++ TTL消息
 
 #### 常用的功能
 + 工作队列
@@ -169,6 +334,12 @@ Producer & Consumer 生产和消费者；
 + 路由（有选择地订阅）
 
 + RPC
+
++ Confirm确认消息，Return返回消息  
+
++ 自定义消费者
+
++ 死信队列  
 
 #### RabbitMQ Server
 
