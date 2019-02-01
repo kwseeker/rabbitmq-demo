@@ -414,7 +414,96 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
     
     死信队列的代码实现：  
     
+
+#### RabbitMQ Java API Guide  
++ Exchange 和 Queue 被动声明    
+
++ 不等待无返回的队列声明  
+    效率更高但是操作是不安全的，往往需要配合心跳机制检测失败操作。  
     
++ 删除实体(如Queue)与清除消息  
+    直接删除；  
+    删除空的实体；   
+    删除无Consumer的实体；  
+    清除实体数据。  
+
++ 发布消息  
+    消息属性：  
+        内容文本类型  
+        传输模式  
+        优先级  
+        用户Id  
+        消息头  
+        过期时间  
+
++ Channel并发注意事项（线程安全）  
+    https://www.rabbitmq.com/api-guide.html#concurrency  
+    根据经验，应该避免多个线程共享同一个Channel，更好的做法是每个线程使用一个 Channel  
+    
++ 检索单个消息
+
++ 处理无法路由的消息  
+    设置 mandatory 标志， 并添加 ReturnListener，将消息的信息返回给Producer。
+    
++ 关闭协议  
+    Client端关闭流程  
+    停机情况的信息  
+    
++ Channel / Connection isOpen() 方法在开发测试环境中的使用  
+
++ 高级连接选项  
+    - 消费者线程池  
+        默认就启用了消费者线程池，支持最大16个线程。  
+        可以使用自定义的线程池。    
+        ```
+        ExecutorService es = Executors.newFixedThreadPool(20);
+        Connection conn = factory.newConnection(es);
+        ```
+        只有在有证据表明消费者回调处理存在严重瓶颈时，才应考虑使用此功能。
+        如果没有执行消费者回调，或者很少，则默认分配绰绰有余
+        
+        使用自定义线程池的注意事项：  
+        When the connection is closed a default ExecutorService will be shutdown(), 
+        but a user-supplied ExecutorService (like es above) will not be shutdown(). 
+        Clients that supply a custom ExecutorService must ensure it is shutdown eventually (by calling its shutdown() method), 
+        or else the pool’s threads may prevent JVM termination.
+        
+        The same executor service may be shared between multiple connections, 
+        or serially re-used on re-connection but it cannot be used after it is shutdown().
+        
+    - 使用 Hosts 列表   
+    
+    - 使用 AddressResolver 接口实现服务发现  
+    
+    - 心跳超时  
+        * 定制线程工厂  
+    
+    - 支持Java 非阻塞IO（NIO）
+
++ 网络异常自动恢复  
+    - 连接恢复
+        连接恢复触发时机  
+    - RecoveryListener  
+    
+    - 连接中断与恢复对消息发布的影响以及解决  
+    
+    - 拓扑恢复  
+    
+    - 异常检测与恢复限制 
+    
+    - 手动确认与自动恢复  
+    
+    - Channel生命周期与拓扑恢复  
+    
++ 未处理异常  
+    
++ 度量和监控  
+
++ RPC特征（请求/回复）  
+
++ TLS支持
+        
+        
 #### RabbitMQ Server
 
 ##### RabbitMQ Server 配置
