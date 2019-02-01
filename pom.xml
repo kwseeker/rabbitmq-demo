@@ -30,6 +30,11 @@
             <artifactId>slf4j-simple</artifactId>
             <version>LATEST</version>
         </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.16.22</version>
+        </dependency>
     </dependencies>
 
 </project>

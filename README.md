@@ -1,5 +1,8 @@
 参考：  
-https://www.rabbitmq.com/documentation.html
+https://www.rabbitmq.com/documentation.html  
+[服务端手册](https://www.rabbitmq.com/admin-guide.html)  
+[客户端手册](https://www.rabbitmq.com/clients.html)  
+[Java API Reference](https://rabbitmq.github.io/rabbitmq-java-client/api/current/)  
 
 目录  
 [TOC]  
@@ -337,9 +340,23 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
     这种方式的问题：Redis缓存与数据库的原子性如何保证（可能Redis写成功了，但是往数据库写失败了）？    
     如果不即时落库，还要考虑Redis缓存与关系数据库定时同步的问题。
     
-+ 消息限流
++ 消息限流  
+    这里讨论的是从队列取消息限流，没有讨论入列时的限流。
+    
+    RabbitMQ提供了一种QOS(服务质量保证)功能，即在非自动确认消息（consume接口中，autoAck=false）的前提下，如果一定数据的消息
+    （通过基于consume或者channel设置QOS值）未被确认前，不进行消费新的消息。
 
-+ TTL消息
+    ```
+    void BasicQos(uint prefechSize, 
+                  ushort prefetchCount, 
+                  bool global);
+    ```
+
++ TTL消息  
+    消息生存时间，有针对消息本身的生存时间和针对队列消息生存时间，
+    针对消息本身的生存时间通过配置消息的属性AMQP.BasicProperties设置，
+    针对队列的消息生存时间（消息入列之后算起）通过（API ？）设置。  
+    
 
 #### 常用的功能
 + 工作队列
@@ -350,12 +367,54 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
 
 + RPC
 
-+ Confirm确认消息，Return返回消息  
++ Confirm确认消息，Return返回消息（Producer到Broker范畴）  
 
+    保证消息可靠性传递的基础，Producer除了投递消息，还要创建一个ConfirmListener用于监听
+    MQ Broker返回消息确认应答（Producer和Broker网络连通的话就会返回Ack，并不是说要将消息成功存入队列才返回Ack）。  
+    Return Listener 用于处理路由不可达的消息（即因为 Exchange不存在 或指定的 RouteingKey 路由不到
+    而导致的不知道消息应该传送到哪里）
+    
+    Confirm确认消息：  
+    1）channel 上开启确认模式 channel.confirmSelect()  
+    2）在channel上添加监听： addConfirmListener， 监听成功和失败的返回结果，
+    根据具体的结果对消息进行重新发送或记录日志等处理。
+    
+    Return返回消息：  
+    1）配置 Mandatory 属性为true，使MQ Broker监听器会接收路由不可达的消息并返回给Producer，
+    然后由 Producer ReturnListener 接收；  
+    此属性为 false 的话，broker端会自动删除该消息。  
+    
+    Question：  
+    1）如果发送一条消息，有多个队列接收呢（topic/fanout），如果确保每个队列都成功接收？  
+    
++ 消费端ACK与NACK（Broker到Consumer范畴）
+    ```
+    channel.basicConsume() autoAck属性控制Producer 是否自动发送消费成功或失败的确认消息；
+    //手动发送消息消费失败确认信息
+    channel.basicNack(envelope.getDeliveryTag(),
+                                false,      //multiple true to reject all messages up to and including
+                                               //the supplied delivery tag; false to reject just the supplied
+                                               //delivery tag 拒绝指定了 deliveryTag 的所有未确认的消息
+                                true);      //重新入队列，实际使用中很少使用
+    //手动发送消息消费成功确认信息
+    channel.basicAck(envelope.getDeliveryTag(), false);                       
+    ```
+    
 + 自定义消费者
 
-+ 死信队列  
-
++ 死信队列（DLX，Dead-Letter-Exchange）  
+    死信：没有消费者消费的消息。  
+    死信队列机制： 当一个消息在队列中变成死信之后，它能被重新publish到另一个Exchange,
+    这个Exchange就是DLX。  
+    
+    死信的判断与常见出现情况：  
+    1）消息被拒绝(basic.reject/basic.nack)，并且被拒绝回列(requeue=false)  
+    2）消息TTL过期  
+    3）队列塞满，从Exchange传来多出来却无法入列的消息  
+    
+    死信队列的代码实现：  
+    
+    
 #### RabbitMQ Server
 
 ##### RabbitMQ Server 配置
@@ -662,5 +721,38 @@ https://github.com/rabbitmq/rabbitmq-tutorials (github上的源码)
     抢购活动中一瞬间并发请求很高，很容易导致应用挂掉，所以在服务器收到请求后先写入消息队列（然后从队列一个个地取并处理），
     消息队列写满后其余的用户请求直接抛弃或跳转到错误页面。
 
-## Spring Boot 应用集成 RabbitMQ
+## Spring 框架整合 RabbitMQ
+
+#### Spring AMQP 应用集成 RabbitMQ 
+
+#### Spring Boot 应用集成 RabbitMQ
+
+#### Spring Cloud 应用集成 RabbitMQ
+
+## RabbitMQ集群架构
+
+## 互联网大厂SET架构
+   
+#### SET架构（单元化架构）
+针对不同的业务线，分别使用不用的集群。
+
+对于业务体量庞大的单个大型分布式集群，会面临的问题：  
+1）容灾问题  
+    
+2）资源拓展问题  
+
+3）大集群拆分问题  
+ 
+架构演变  
+同城双活 -> 两地三中心 -> SET化
+
+SET架构方案目标  
+1）业务：解决业务遇到的拓展性和容灾等需求，支持业务的高速发展；  
+2）通用性： 架构侧形成统一通用的解决方案，方便各业务线接入使用。   
+
+SET化架构策略示意图  
+
+
+## 一线大厂MQ基础组件封装和架构设计
+
 
