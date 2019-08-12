@@ -134,6 +134,7 @@ AMQP(Advanced Message Queueing Protocol)协议模型：
 
 核心概念：
 + Server  
+
 + Connection  
     相关类：  
     ConnectionFactory:连接工厂  
@@ -257,30 +258,33 @@ AMQP(Advanced Message Queueing Protocol)协议模型：
     app_id  
     cluster_id  
     
-+ Virtual Host  
-+ Exchange  
++ Virtual Host（在Broker上建立的虚拟机） 
+ 
++ Exchange(只是一张映射表)  
+
     创建之后将会一直存在，除非手动删除或重启rabbitmq-server
 
     功能：  
         交换机用于接收消息，并根据路由键(Routing Key)转发消息到绑定的队列；  
-        交换机可能从多个client接收消息，并转发给多个队列，具体由交换机类型决定；  
+        交换机可能从多个client接收消息，并转发给多个队列，具体由交换机类型决定； 
+         
     类型：  
         Direct：此模式可以使用RabbitMQ自带的Exchange,不需要绑定操作，直接通过RouteKey完全匹配队列传递；  
-        Topic：此模式可以进行模糊匹配（#匹配一或多个词，*匹配一个词）  
-        fanout：不通过路由键过滤消息(性能最好)，直接将队列绑定到交换机上，只要有消息发送到交换机都会转发到与改交换机绑定的队列；    
+        Topic：此模式可以进行模糊匹配（#匹配0或多个词，*匹配一个词）  
+        fanout：（广播）不通过路由键过滤消息(性能最好)，直接将队列绑定到交换机上，只要有消息发送到交换机都会转发到与改交换机绑定的队列；    
         headers：经过消息头路由，不常用。  
         ...  
     
-    Durability(持久化)：  
-        是否需要持久化；
-    Auto Delete：  
-        交换机上无绑定队列时，自动删除此交换机；
-    Internal：
-        当前Exchange是否用于RabbitMQ内部使用(拓展插件，拓展参数等)，默认为false。
+    参数：  
+    Durability(持久化)：    是否需要持久化；  
+    Auto Delete：    交换机上无绑定队列时，自动删除此交换机；  
+    Internal：   当前Exchange是否用于RabbitMQ内部使用(拓展插件，拓展参数等)，默认为false。  
         
 + Binding  
+
 + Routing Key   
     路由键，相当于过滤器，交换机与队列即使是绑定的如果路由键不同也不会接收。    
+
 + Queue  
     Queue：具体的消息存储队列；  
 
@@ -291,6 +295,7 @@ AMQP(Advanced Message Queueing Protocol)协议模型：
 
 
 #### Rabbit核心原理与生产问题
+
 RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
 
 + RabbitMQ架构模型
@@ -301,64 +306,8 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
 
 + 消息生产与消费  
 
-+ 消息高可靠性(保障消息100%投递成功)   
-    添加发送端接收MQ节点（Broker）确认应答的逻辑，如果发送端收到确认应答信息则投递成功，  
-    可能有两种异常：消息发送失败；接受确认应答消息失败。  
-    
-    互联网大厂针对上面问题的解决方案：  
-    下面两种操作中都不对数据添加事务管理。
-    
-    1、消息落库，对消息状态进行打标  
-    ![](https://upload-images.jianshu.io/upload_images/426671-5af2da37ddcf30c0.png?imageMogr2/auto-orient/)  
-    1）存储消息到数据库，并设置状态；  
-    2）发送消息成功（收到应答），修改消息状态；  
-    3）对状态为未成功发送的消息，进行轮询（如每隔10秒轮询一次）重发（有最大重试次数）；  
-    4）经过上面步骤可能还有少量的消息传递失败，这时需要，额外处理，给出失败原因。  
-    这种处理方法并不适合高并发场景，因为数据库操作太多。  
-
-    2、消息的延迟投递，做二次确认，回调检查   
-    ![](https://upload-images.jianshu.io/upload_images/426671-5d9cfdda2cf2fc84.png?imageMogr2/auto-orient/)  
-    1）上层业务按正常时间先发送一次消息，并设置N分钟后重新发送；
-    2）消息发送到MQ节点（可能是负载均衡的集群），消费Listener监听消息并发给下层服务处理
-    3）下层服务处理完成，发送一个confirm消息到MQ节点，失败补偿服务（callback service）
-    这种方式可以有效减少数据库操作，性能更好。
-    
-+ 消费端-幂等性保障  
-    如海量订单产生的业务高峰期如何避免消息的重复消费问题（可能因为系统原因导致消息重复发送，
-    但是只能执行一次）  
-    
-    业界主流的幂等性操作方案：  
-    
-    1、唯一ID + 指纹码 机制，利用数据库主键去重  
-    指纹码是为了确保当短时间内确实有多次操作，保证这几次操作不会被认为是重复的。  
-    好处：实现简单；  
-    坏处：高并发下有数据库写入的性能瓶颈；  
-    性能瓶颈解决：跟进ID进行分库分表进行算法路由。  
-    
-    2、利用Redis的原子性实现  
-    实现Redis的原子特性的几种方式：自增、是否已存在等。  
-    这种方式的问题：Redis缓存与数据库的原子性如何保证（可能Redis写成功了，但是往数据库写失败了）？    
-    如果不即时落库，还要考虑Redis缓存与关系数据库定时同步的问题。
-    
-+ 消息限流  
-    这里讨论的是从队列取消息限流，没有讨论入列时的限流。
-    
-    RabbitMQ提供了一种QOS(服务质量保证)功能，即在非自动确认消息（consume接口中，autoAck=false）的前提下，如果一定数据的消息
-    （通过基于consume或者channel设置QOS值）未被确认前，不进行消费新的消息。
-
-    ```
-    void BasicQos(uint prefechSize, 
-                  ushort prefetchCount, 
-                  bool global);
-    ```
-
-+ TTL消息  
-    消息生存时间，有针对消息本身的生存时间和针对队列消息生存时间，
-    针对消息本身的生存时间通过配置消息的属性AMQP.BasicProperties设置，
-    针对队列的消息生存时间（消息入列之后算起）通过（API ？）设置。  
-    
-
 #### 常用的功能
+
 + 工作队列
 
 + 发布/订阅
@@ -366,6 +315,8 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
 + 路由（有选择地订阅）
 
 + RPC
+
+    调用方和被调用方互为消息的生产者和消费者。
 
 + Confirm确认消息，Return返回消息（Producer到Broker范畴）  
 
@@ -402,7 +353,26 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
     
 + 自定义消费者
 
-+ 死信队列（DLX，Dead-Letter-Exchange）  
++ TTL（Time to Live）
+
+    消息生存时间，有针对消息本身的生存时间和针对队列消息生存时间，
+    针对消息本身的生存时间通过配置消息的属性AMQP.BasicProperties设置，
+    针对队列的消息生存时间（消息入列之后算起）通过（API ？）设置。  
+    
+    可以通过指定消息或队列的TTL实现消息自动删除，避免消息堆积。
+    ```
+    //指定队列的生存时间
+    Map<String, Object> args = new HashMap<>();
+    args.put("x-message-ttl", 6000);        //6s后队列被删除，消息放到DLX
+    channel.queueDeclare("TEST_TTL_QUEUE", false, false, false, args);
+    //指定消息的生存时间
+    AMQP.BasicProperties properties = new AMQP.BasicProperties.Builder()
+        .expiration("10000")
+        .build();
+    ```
+
++ 死信队列（DLX，Dead-Letter-Exchange， 死信交换机）  
+
     死信：没有消费者消费的消息。  
     死信队列机制： 当一个消息在队列中变成死信之后，它能被重新publish到另一个Exchange,
     这个Exchange就是DLX。  
@@ -410,12 +380,40 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
     死信的判断与常见出现情况：  
     1）消息被拒绝(basic.reject/basic.nack)，并且被拒绝回列(requeue=false)  
     2）消息TTL过期  
-    3）队列塞满，从Exchange传来多出来却无法入列的消息  
+    3）队列塞满，先进入队列的消息没来的及被消费被后面的顶出，进入死信队列（注意是先进入的进死信队列） 
+    ```
+    //设置队列长度 x-max-length
+    Map<String, Object> args = new HashMap<>();
+    args.put("x-max-length", 100);
+    channel.queueDeclare("TEST_TTL_QUEUE", false, false, false, args);
+    ```
     
-    死信队列的代码实现：  
+    Producer ---> Default Exchange ---> A Queue --(满足上面条件之一)-> DLX_Exchange -> DLX_Queue
     
+    可以设置读取死信队列，从死信队列读取消息，可用于记录异常或其他操作。
+    
+    代码实现：  
+    
++ 消息按优先级投递
+
+    ```
+    AMQP.BasicProperties properties = new AMQP.BasicProperties.Builder()
+            .priority(5)    //指定消息优先级，默认5，队列属性x-max-priority指定消息最大优先级
+            .build();
+    chanel.basicPublish("", QUEUE_NAME, properties, msg.getBytes());
+    ```
+    
++ 消息延迟投递
+
+    两种实现方式：
+    1）使用延迟队列插件
+    2）使用死信队列TTL投递特性，待消息超时发到死信队列后，消费者从死信队列取消息处理。
+    ```
+    
+    ```
 
 #### RabbitMQ Java API Guide  
+
 + Exchange 和 Queue 被动声明    
 
 + 不等待无返回的队列声明  
@@ -452,6 +450,7 @@ RabbitMQ是一个消息代理，核心功能就是接收和发送消息。
 + Channel / Connection isOpen() 方法在开发测试环境中的使用  
 
 + 高级连接选项  
+
     - 消费者线程池  
         默认就启用了消费者线程池，支持最大16个线程。  
         可以使用自定义的线程池。    
@@ -592,7 +591,7 @@ STOMP、MQTT协议的优缺点？怎么选择？
 
 ##### 命令行工具
 
-## 常用API方法
+## 常用API方法总结
 ```
 queueDeclare(String queue, 
             boolean durable, 
@@ -813,6 +812,26 @@ https://github.com/rabbitmq/rabbitmq-tutorials (github上的源码)
 ## Spring 框架整合 RabbitMQ
 
 #### Spring AMQP 应用集成 RabbitMQ 
+SpringAMQP 对AMQP协议接口做了重新封装，使得接口更加易用。  
+
+SpringAMQP 声明Exchange\Queue\Binding是通过使用SpringAMQP对应构造方法构造，然后@Bean注入的方式。  
+声明好之后，启动应用，应用会扫描这些Bean及其配置，然后通过调用RabbitMQ的方法进行实际的初始化。  
+所以需要在配置文件中提前声明好Exchange\Queue\Binding。
+
+RabbitTemplate（消息模板）  
+是与SpringAMQP整合的时候进行消息发送的关键类。  
+提供了丰富的消息发送方法，包括可靠性投递消息方法、回调监听消息接口ConfirmCallback，返回值确认接口
+ReturnCallback等等。同样需要先注入到Spring容器中，然后直接使用。  
+
+SimpleMessageListenerContainer（简单消息监听容器）  
+1）监听队列（多个队列），自动启动，自动声明功能；    
+2）支持事务（设置事务特性，事务管理器，事务属性，事务容量[并发]，是否开启事务，回滚消息等）；  
+3）设置消费者数量，如最大最小数量，批量消费；
+4）设置消息确认和自动确认模式，是否重回队列，异常捕获handler函数；  
+5）设置消费者标签生成策略，是否独占模式，消费者属性等；  
+6）设置具体的监听器，消息转换器等。
+使用 SimpleMessageListenerContainer 可以动态地修改配置。  
+
 
 #### Spring Boot 应用集成 RabbitMQ
 
